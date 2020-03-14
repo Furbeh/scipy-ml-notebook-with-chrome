@@ -1,6 +1,9 @@
   
 FROM ucsdets/scipy-ml-notebook
 
+
+#############
+#Dockerfile completely made by https://github.com/curtis-ita/SeleniumDocker
 LABEL maintainer="Vitor Curtis <curtis@ita.br>"
 
 ENV CHROME_VER=2.44
