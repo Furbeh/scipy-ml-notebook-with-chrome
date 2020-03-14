@@ -1,10 +1,6 @@
 ARG BASE_CONTAINER=jupyter/scipy-notebook:2ce7c06a61a1
 ARG DATAHUB_CONTAINER=ucsdets/datahub-base-notebook:2019.4.9
 
-ARG CHROME_CONTAINER=justinribeiro/chrome-headless
-
-FROM $CHROME_CONTAINER
-
 FROM $DATAHUB_CONTAINER as datahub
 
 FROM $BASE_CONTAINER
@@ -66,3 +62,49 @@ COPY --from=datahub /run_jupyter.sh /
 ######################################
 # Install python packages unprivileged where possible
 USER $NB_UID:$NB_GID
+
+###########################
+# Chrome Dockerfile pasted in here from https://hub.docker.com/r/justinribeiro/chrome-headless
+# Base docker image
+FROM debian:buster-slim
+LABEL name="chrome-headless" \
+	maintainer="Justin Ribeiro <justin@justinribeiro.com>" \
+	version="3.0" \
+	description="Google Chrome Headless in a container"
+
+# Install deps + add Chrome Stable + purge all the things
+RUN apt-get update && apt-get install -y \
+	apt-transport-https \
+	ca-certificates \
+	curl \
+	gnupg \
+	--no-install-recommends \
+	&& curl -sSL https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+	&& echo "deb https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+	&& apt-get update && apt-get install -y \
+	google-chrome-unstable \
+	fontconfig \
+	fonts-ipafont-gothic \
+	fonts-wqy-zenhei \
+	fonts-thai-tlwg \
+	fonts-kacst \
+	fonts-symbola \
+	fonts-noto \
+	fonts-freefont-ttf \
+	--no-install-recommends \
+	&& apt-get purge --auto-remove -y curl gnupg \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Add Chrome as a user
+RUN groupadd -r chrome && useradd -r -g chrome -G audio,video chrome \
+	&& mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
+
+# Run Chrome non-privileged
+USER chrome
+
+# Expose port 9222
+EXPOSE 9222
+
+# Autorun chrome headless with no GPU
+ENTRYPOINT [ "google-chrome" ]
+CMD [ "--headless", "--disable-gpu", "--remote-debugging-address=0.0.0.0", "--remote-debugging-port=9222" ]
